@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>KiteKey.AI.Azure.VoiceLive</PackageId>
+    <Description>Azure AI Voice Live session lifecycle and credential warmup, independent of application configuration.</Description>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="KiteKey.AI.Azure.VoiceLive.Tests" />
+    <PackageReference Include="Azure.AI.VoiceLive" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+</Project>

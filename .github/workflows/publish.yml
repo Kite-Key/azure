@@ -1,0 +1,31 @@
+name: Publish NuGet (manual OIDC)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_publishing:
+        description: Confirm coordinated publication of both Azure packages
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+jobs:
+  publish:
+    if: inputs.confirm_publishing == true
+    environment: nuget
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test KiteKey.AI.Azure.sln --configuration Release
+      - run: dotnet pack KiteKey.AI.Azure.sln --configuration Release --no-restore --output artifacts
+      - uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json

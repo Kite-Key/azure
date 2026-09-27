@@ -22,6 +22,10 @@ flowchart LR
     Provider --> Warmup["Optional warmup hosted service"]
     Provider --> Conversation["VoiceLiveConversationService"]
     Host --> Conversation
+    Host --> Assistant["VoiceLiveVoiceAssistant"]
+    Audio["IVoiceAudioClient<br/>host audio/transcripts"] <--> Assistant
+    Handler["VoiceFunctionHandler<br/>host tool executor"] <--> Assistant
+    Assistant --> Conversation
     Conversation --> Target{"Session target"}
     Target --> Agent["Foundry agent + project"]
     Target --> Model["Ephemeral model + instructions/tools"]
@@ -30,7 +34,7 @@ flowchart LR
     SDK --> Session["VoiceLiveSession owned by conversation"]
 ```
 
-The service applies per-call `VoiceSessionSettings` overrides to host-provided defaults, validates voice/VAD values, lazily creates a Voice Live client, and disposes its session. The host retains Azure Functions triggers, application-specific agent lookup, tool execution, audio I/O, credentials, and environment-based registrations.
+The conversation service applies per-call `VoiceSessionSettings` overrides to host-provided defaults, validates voice/VAD values, lazily creates a Voice Live client, and disposes its session. The assistant pipes microphone input into the session, routes synthesized audio and transcript updates to a host-provided transport, handles user barge-in, sends function results back to Voice Live, and terminates both concurrent loops on disconnect. The host retains Azure Functions triggers, application-specific agent lookup, tool execution, audio I/O, credentials, and environment-based registrations.
 
 ## Extraction boundary
 
@@ -39,10 +43,24 @@ Migrated and adapted from `ArtificialIntelligence/Delphinium.Services.Artificial
 | Package | Original source files |
 | --- | --- |
 | KiteKey.AI.Azure | `Voice/AzureVoiceListingService.cs`, `Voice/BearerTokenHandler.cs` |
-| KiteKey.AI.Azure.VoiceLive | `Voice/VoiceLiveConversationService.cs`, `Voice/VoiceLiveCredentialProvider.cs`, `Voice/VoiceLiveCredentialWarmupService.cs`, `Voice/VoiceSessionSettings.cs`, `Voice/EphemeralFunctionTool.cs` |
+| KiteKey.AI.Azure.VoiceLive | `Voice/VoiceLiveVoiceAssistant.cs`, `Voice/VoiceLiveConversationService.cs`, `Voice/VoiceLiveCredentialProvider.cs`, `Voice/VoiceLiveCredentialWarmupService.cs`, `Voice/VoiceSessionSettings.cs`, `Voice/EphemeralFunctionTool.cs` |
 
-Deferred: `VoiceLiveVoiceAssistant.cs` and `IVoiceAssistant.cs` couple to Delphinium audio clients, function execution, and assistant services; agent/assistant/chat services depend on Delphinium entities and persistence; Delphinium settings/config files, the Azure Functions host, and all application credential registrations remain in Delphinium. The concurrently developed `KiteKey.AI.Abstractions` currently exposes chat/text/function contracts, not voice discovery or session contracts, so these packages do not force an unrelated abstraction dependency.
+New package-local contracts: `IVoiceAudioClient`, `VoiceTranscript`, `VoiceToolCall`, `VoiceFunctionHandler`, `VoiceFunctionResult`. The host maps its own transcript entity to `VoiceTranscript` and implements the audio interface; no Delphinium `Data.Shared` type or settings/config file is shipped. The AI repository now has `KiteKey.AI.Abstractions.Voice.IHumanAudioClient`, but its package is not published. Azure does **not** include a sibling-project reference or unresolved package dependency: once a coordinated version is published, an adapter can bridge its audio contract to `IVoiceAudioClient` (or replace this temporary transport interface in a deliberate breaking release). Its `ConversationTranscriptMessage` is a separate AI contract and is not copied into this Azure package.
+
+The assistant addition advances `KiteKey.AI.Azure.VoiceLive` from the initial `0.1.0` CI artifact to `0.2.0`; `KiteKey.AI.Azure` remains `0.1.0`. Neither version has been published here.
+
+### API migration from Delphinium
+
+| Previous API/behavior | New Azure package API/behavior |
+| --- | --- |
+| `VoiceLiveVoiceAssistant` required `IFunctionExecutor`, `IAssistantService`, and `IOptions<AzureAISettings>` | Constructor takes `VoiceLiveConversationService`, logger, and optional `VoiceFunctionHandler` delegate; host maps its executor and conversation ID to this delegate. |
+| `StartConversation(assistantId, IHumanAudioClient, allowInterrupts, cancellation, initialMessage, settings)` | `StartConversationAsync(IVoiceAudioClient, allowInterrupts, assistantId, settings, cancellationToken)`. The previously ignored `initialMessage` and unsupported `threadId` overload are removed. |
+| Delphinium `IHumanAudioClient` sent `ConversationTranscriptMessage` | Implement `IVoiceAudioClient.SendTranscriptAsync(VoiceTranscript, ...)` and map fields in the host. `VoiceToolCall` holds optional tool details; this package does not depend on the host's persistence model. |
+| Hard-coded `call_sid` / `transfer_call_sid` context and `StopConversationFunction` | Host receives `conversationId` in `VoiceFunctionHandler` and chooses its own trusted context keys. Return `VoiceFunctionResult(..., EndConversation: true)` for a farewell. |
+| Assistant disposed audio client and exposed thread/initial-message parameters that did not work | Host retains audio-client ownership; assistant owns a single conversation and disposes its session. |
+
+Deferred: Delphinium `IVoiceAssistant`, `IHumanAudioClient`, `ConversationTranscriptMessage`, other agent/assistant/chat services, app settings/config files, Azure Functions host, and application credential registrations remain in Delphinium. They require a host-side adapter when Delphinium is integrated with the new packages.
 
 ## Build and publishing
 
-CI restores, tests, and packs both source packages independently of the Delphinium repository. The separate **manual-only** publish workflow uses NuGet Trusted Publishing via GitHub OIDC (`id-token: write`) instead of stored API keys; it requires explicit confirmation and should be protected with a GitHub `nuget` environment approval rule and matching NuGet.org trusted publisher policy before use. The package build does **not** publish.
+CI restores, tests, and packs both source packages independently of the Delphinium repository. The separate **manual-only** publish workflow uses NuGet Trusted Publishing via GitHub OIDC (`id-token: write`) instead of stored API keys; it requires explicit confirmation, a `NUGET_USER` repository variable, and should be protected with a GitHub `nuget` environment approval rule and matching NuGet.org trusted publisher policy before use. The package build does **not** publish.

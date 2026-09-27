@@ -2,7 +2,7 @@
   <PropertyGroup>
     <PackageId>KiteKey.AI.Azure.VoiceLive</PackageId>
     <Description>Azure AI Voice Live session lifecycle and credential warmup, independent of application configuration.</Description>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="KiteKey.AI.Azure.VoiceLive.Tests" />

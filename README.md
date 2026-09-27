@@ -43,11 +43,11 @@ using var assistant = new VoiceLiveVoiceAssistant(
     {
         // Route to your own function executor. Return null only for unhandled calls.
         string json = await ExecuteFunctionAsync(name, arguments, conversationId, cancellation);
-        return new VoiceFunctionResult(json, EndConversation: name == "stop_conversation");
+        return new VoiceFunctionResult(json, EndConversation: ShouldEndConversation(name));
     });
 // await assistant.StartConversationAsync(yourAudioClient, allowInterrupts: true, cancellationToken: cancellationToken);
 ```
 
-`yourAudioClient` implements `IVoiceAudioClient`, supplying a readable microphone stream, output audio, playback clearing, status and transcript delivery. The sample's `ExecuteFunctionAsync` is a host function, not part of these packages. The host owns and disposes its audio transport; the assistant owns its single conversation service. The host can register `VoiceLiveCredentialWarmupService` after registering its `VoiceLiveCredentialProvider` singleton. Ephemeral sessions instead pass `VoiceSessionSettings` with an `EphemeralAgent` containing model ID, instructions and optional function tools; an agent ID/project is then unnecessary.
+`yourAudioClient` implements `IVoiceAudioClient`, supplying a readable microphone stream, output audio, playback clearing, status and transcript delivery. The sample's `ExecuteFunctionAsync` and `ShouldEndConversation` are host-defined functions, not part of these packages. The host owns and disposes its audio transport; the assistant owns its single conversation service. The host can register `VoiceLiveCredentialWarmupService` after registering its `VoiceLiveCredentialProvider` singleton. Ephemeral sessions instead pass `VoiceSessionSettings` with an `EphemeralAgent` containing model ID, instructions and optional function tools; an agent ID/project is then unnecessary.
 
 Run `dotnet test KiteKey.AI.Azure.sln` and `dotnet pack KiteKey.AI.Azure.sln --configuration Release`; only `src/dotnet` projects are packable. See [architecture and extraction scope](docs/architecture.md).

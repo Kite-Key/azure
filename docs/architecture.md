@@ -38,7 +38,7 @@ The conversation service applies per-call `VoiceSessionSettings` overrides to ho
 
 ## Extraction boundary
 
-Migrated and adapted from `ArtificialIntelligence/Delphinium.Services.ArtificialIntelligence`:
+Migrated and adapted from the Delphinium AI library:
 
 | Package | Original source files |
 | --- | --- |
@@ -56,7 +56,7 @@ The assistant addition advances `KiteKey.AI.Azure.VoiceLive` from the initial `0
 | `VoiceLiveVoiceAssistant` required `IFunctionExecutor`, `IAssistantService`, and `IOptions<AzureAISettings>` | Constructor takes `VoiceLiveConversationService`, logger, and optional `VoiceFunctionHandler` delegate; host maps its executor and conversation ID to this delegate. |
 | `StartConversation(assistantId, IHumanAudioClient, allowInterrupts, cancellation, initialMessage, settings)` | `StartConversationAsync(IVoiceAudioClient, allowInterrupts, assistantId, settings, cancellationToken)`. The previously ignored `initialMessage` and unsupported `threadId` overload are removed. |
 | Delphinium `IHumanAudioClient` sent `ConversationTranscriptMessage` | Implement `IVoiceAudioClient.SendTranscriptAsync(VoiceTranscript, ...)` and map fields in the host. `VoiceToolCall` holds optional tool details; this package does not depend on the host's persistence model. |
-| Hard-coded `call_sid` / `transfer_call_sid` context and `StopConversationFunction` | Host receives `conversationId` in `VoiceFunctionHandler` and chooses its own trusted context keys. Return `VoiceFunctionResult(..., EndConversation: true)` for a farewell. |
+| Hard-coded host context keys and a native stop-function handler | Host receives `conversationId` in `VoiceFunctionHandler` and chooses its own trusted context keys. Return `VoiceFunctionResult(..., EndConversation: true)` for a farewell. |
 | Assistant disposed audio client and exposed thread/initial-message parameters that did not work | Host retains audio-client ownership; assistant owns a single conversation and disposes its session. |
 
 Deferred: Delphinium `IVoiceAssistant`, `IHumanAudioClient`, `ConversationTranscriptMessage`, other agent/assistant/chat services, app settings/config files, Azure Functions host, and application credential registrations remain in Delphinium. They require a host-side adapter when Delphinium is integrated with the new packages.

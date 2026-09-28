@@ -2,6 +2,7 @@ using System.Text;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Azure.AI.VoiceLive;
+using KiteKey.AI.Abstractions.Voice;
 using Microsoft.Extensions.Logging;
 
 namespace KiteKey.AI.Azure.VoiceLive;

@@ -23,7 +23,7 @@ flowchart LR
     Provider --> Conversation["VoiceLiveConversationService"]
     Host --> Conversation
     Host --> Assistant["VoiceLiveVoiceAssistant"]
-    Audio["IVoiceAudioClient<br/>host audio/transcripts"] <--> Assistant
+    Audio["KiteKey.AI.Abstractions.Voice.IVoiceAudioClient<br/>host audio/transcripts"] <--> Assistant
     Handler["VoiceFunctionHandler<br/>host tool executor"] <--> Assistant
     Assistant --> Conversation
     Conversation --> Target{"Session target"}
@@ -45,7 +45,7 @@ Migrated and adapted from the Delphinium AI library:
 | KiteKey.AI.Azure | `Voice/AzureVoiceListingService.cs`, `Voice/BearerTokenHandler.cs` |
 | KiteKey.AI.Azure.VoiceLive | `Voice/VoiceLiveVoiceAssistant.cs`, `Voice/VoiceLiveConversationService.cs`, `Voice/VoiceLiveCredentialProvider.cs`, `Voice/VoiceLiveCredentialWarmupService.cs`, `Voice/VoiceSessionSettings.cs`, `Voice/EphemeralFunctionTool.cs` |
 
-New package-local contracts: `IVoiceAudioClient`, `VoiceTranscript`, `VoiceToolCall`, `VoiceFunctionHandler`, `VoiceFunctionResult`. The host maps its own transcript entity to `VoiceTranscript` and implements the audio interface; no Delphinium `Data.Shared` type or settings/config file is shipped. The AI repository now has `KiteKey.AI.Abstractions.Voice.IHumanAudioClient`, but its package is not published. Azure does **not** include a sibling-project reference or unresolved package dependency: once a coordinated version is published, an adapter can bridge its audio contract to `IVoiceAudioClient` (or replace this temporary transport interface in a deliberate breaking release). Its `ConversationTranscriptMessage` is a separate AI contract and is not copied into this Azure package.
+The VoiceLive package depends on the published `KiteKey.AI.Abstractions` 0.1.0 package for `IVoiceAudioClient`, `VoiceTranscript`, and `VoiceToolCall`. The package-local `VoiceFunctionHandler` and `VoiceFunctionResult` remain specific to handling Voice Live function results. The host maps its own transcript entity to `VoiceTranscript` and implements the shared audio interface; no Delphinium domain entity or settings/config file is shipped. CI restores the package from NuGet.org, not a sibling-project reference.
 
 The assistant addition advances `KiteKey.AI.Azure.VoiceLive` from the initial `0.1.0` CI artifact to `0.2.0`; `KiteKey.AI.Azure` remains `0.1.0`. Neither version has been published here.
 
@@ -55,7 +55,7 @@ The assistant addition advances `KiteKey.AI.Azure.VoiceLive` from the initial `0
 | --- | --- |
 | `VoiceLiveVoiceAssistant` required `IFunctionExecutor`, `IAssistantService`, and `IOptions<AzureAISettings>` | Constructor takes `VoiceLiveConversationService`, logger, and optional `VoiceFunctionHandler` delegate; host maps its executor and conversation ID to this delegate. |
 | `StartConversation(assistantId, IHumanAudioClient, allowInterrupts, cancellation, initialMessage, settings)` | `StartConversationAsync(IVoiceAudioClient, allowInterrupts, assistantId, settings, cancellationToken)`. The previously ignored `initialMessage` and unsupported `threadId` overload are removed. |
-| Delphinium `IHumanAudioClient` sent `ConversationTranscriptMessage` | Implement `IVoiceAudioClient.SendTranscriptAsync(VoiceTranscript, ...)` and map fields in the host. `VoiceToolCall` holds optional tool details; this package does not depend on the host's persistence model. |
+| Delphinium `IHumanAudioClient` sent `ConversationTranscriptMessage` | Implement `KiteKey.AI.Abstractions.Voice.IVoiceAudioClient.SendTranscriptAsync(VoiceTranscript, ...)` and map fields in the host. `VoiceToolCall` holds optional tool details; this package does not depend on the host's persistence model. |
 | Hard-coded host context keys and a native stop-function handler | Host receives `conversationId` in `VoiceFunctionHandler` and chooses its own trusted context keys. Return `VoiceFunctionResult(..., EndConversation: true)` for a farewell. |
 | Assistant disposed audio client and exposed thread/initial-message parameters that did not work | Host retains audio-client ownership; assistant owns a single conversation and disposes its session. |
 

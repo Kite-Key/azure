@@ -5,13 +5,14 @@ Two independently packable .NET 10 libraries for Azure AI integrations, licensed
 | Package | Purpose |
 | --- | --- |
 | `KiteKey.AI.Azure` | Azure Speech voice discovery and credential-based HTTP bearer authentication |
-| `KiteKey.AI.Azure.VoiceLive` | Voice Live bidirectional assistant, injectable audio/function transport, credential reuse/warmup, and agent or ephemeral-model sessions |
+| `KiteKey.AI.Azure.VoiceLive` | Voice Live bidirectional assistant, shared `KiteKey.AI.Abstractions` audio transport, injectable function handling, credential reuse/warmup, and agent or ephemeral-model sessions |
 
 The host owns credentials and configuration; neither library reads app settings, creates credentials, nor depends on Delphinium domain entities. For example:
 
 ```csharp
 using Azure.Core;
 using KiteKey.AI.Azure;
+using KiteKey.AI.Abstractions.Voice;
 using KiteKey.AI.Azure.VoiceLive;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -48,6 +49,6 @@ using var assistant = new VoiceLiveVoiceAssistant(
 // await assistant.StartConversationAsync(yourAudioClient, allowInterrupts: true, cancellationToken: cancellationToken);
 ```
 
-`yourHostCredential` is an injected `TokenCredential`; this repository does not select or construct an application credential. `yourAudioClient` implements `IVoiceAudioClient`, supplying a readable microphone stream, output audio, playback clearing, status and transcript delivery. The sample's `ExecuteFunctionAsync` and `ShouldEndConversation` are host-defined functions, not part of these packages. The host owns and disposes its audio transport; the assistant owns its single conversation service. The host can register `VoiceLiveCredentialWarmupService` after registering its `VoiceLiveCredentialProvider` singleton. Ephemeral sessions instead pass `VoiceSessionSettings` with an `EphemeralAgent` containing model ID, instructions and optional function tools; an agent ID/project is then unnecessary.
+`yourHostCredential` is an injected `TokenCredential`; this repository does not select or construct an application credential. `yourAudioClient` implements `KiteKey.AI.Abstractions.Voice.IVoiceAudioClient`, supplying a readable microphone stream, output audio, playback clearing, status and transcript delivery. `VoiceTranscript` and `VoiceToolCall` also come from the shared abstractions package; only `VoiceFunctionHandler` and `VoiceFunctionResult` are local to VoiceLive. The sample's `ExecuteFunctionAsync` and `ShouldEndConversation` are host-defined functions, not part of these packages. The host owns and disposes its audio transport; the assistant owns its single conversation service. The host can register `VoiceLiveCredentialWarmupService` after registering its `VoiceLiveCredentialProvider` singleton. Ephemeral sessions instead pass `VoiceSessionSettings` with an `EphemeralAgent` containing model ID, instructions and optional function tools; an agent ID/project is then unnecessary.
 
 Run `dotnet test KiteKey.AI.Azure.sln` and `dotnet pack KiteKey.AI.Azure.sln --configuration Release`; only `src/dotnet` projects are packable. See [architecture and extraction scope](docs/architecture.md).

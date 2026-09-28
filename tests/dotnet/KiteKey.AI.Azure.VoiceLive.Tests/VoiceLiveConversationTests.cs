@@ -1,5 +1,6 @@
 using Azure.Core;
 using Azure.AI.VoiceLive;
+using KiteKey.AI.Abstractions.Voice;
 using KiteKey.AI.Azure.VoiceLive;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
